@@ -15,6 +15,16 @@ class Vgg16(nn.Module):
         super(Vgg16, self).__init__()
         self.__vgg = models.vgg16(pretrained=True).features
 
+    def cuda(self) -> nn.Module:
+        """
+        Move all model parameters and buffers to the GPU.
+
+        :return: (nn.Module) Return myself.
+        """
+        super().cuda()
+        self.__vgg.cuda()
+        return self
+
     def forward(self, X):
         h = X
         features = {}

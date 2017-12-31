@@ -20,7 +20,7 @@ class SimpleContentLoss(object):
         self.__f_x_c = Variable(content_feature.data, requires_grad=False)
         self.__mse_loss = MSELoss()
         if gpu:
-            self.__f_x_c.cuda()
+            self.__f_x_c = self.__f_x_c.cuda()
             self.__mse_loss.cuda()
 
     def __call__(self, features):
