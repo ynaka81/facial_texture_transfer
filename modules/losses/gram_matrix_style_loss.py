@@ -10,16 +10,21 @@ class GramMatrixStyleLoss(object):
     L2 distance between gram matrix of content features and that of output features.
 
     :param style_features: (dict) The feature maps of style image.
+    :param gpu: (bool) Whether or not to use GPU.
     """
 
     STYLE_FEATURES = ('1_1', '2_1', '3_1', '4_1')
 
-    def __init__(self, style_features: typing.Dict[str, torch.FloatTensor]):
+    def __init__(self, style_features: typing.Dict[str, torch.FloatTensor], gpu: bool):
         self.__g_x_s = {}
         for feature_name in self.STYLE_FEATURES:
             gram_matrix = self.__gram_matrix(style_features[feature_name])
             self.__g_x_s[feature_name] = Variable(gram_matrix.data, requires_grad=False)
         self.__mse_loss = MSELoss()
+        if gpu:
+            for g_x_s in self.__g_x_s.values():
+                g_x_s.cuda()
+            self.__mse_loss.cuda()
 
     def __gram_matrix(self, feature):
         b, ch, h, w = feature.size()

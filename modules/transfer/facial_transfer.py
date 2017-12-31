@@ -56,9 +56,9 @@ class FacialTransfer(object):
         optimizer = LBFGS([output_image], lr=1, history_size=10)
         # Setup losses.
         content_features = self.vgg(content_image)
-        content_loss = SimpleContentLoss(content_features)
+        content_loss = SimpleContentLoss(content_features, self.gpu)
         style_features = self.vgg(style_image)
-        style_loss = GramMatrixStyleLoss(style_features)
+        style_loss = GramMatrixStyleLoss(style_features, self.gpu)
         tv_loss = TotalVariationRegularization()
         # Optimize the image.
         for i in trange(iterations):

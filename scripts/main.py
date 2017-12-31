@@ -29,7 +29,7 @@ def main():
     output = 'output'
     os.makedirs(output, exist_ok=True)
     # Transfer style to content.
-    transfer = FacialTransfer(gpu=False, output=output)
+    transfer = FacialTransfer(gpu=args.use_gpu, output=output)
     transfer.run(args.content, args.style, **vars(args))
 
 
