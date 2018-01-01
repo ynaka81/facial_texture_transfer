@@ -18,7 +18,7 @@ class SimpleContentLoss(object):
     def __init__(self, content_features: typing.Dict[str, torch.FloatTensor], gpu: bool):
         content_feature = content_features[self.CONTENT_FEATURE]
         self.__f_x_c = Variable(content_feature.data, requires_grad=False)
-        self.__mse_loss = MSELoss()
+        self.__mse_loss = MSELoss(size_average=False)
         if gpu:
             self.__f_x_c = self.__f_x_c.cuda()
             self.__mse_loss.cuda()

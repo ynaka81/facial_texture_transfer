@@ -14,4 +14,4 @@ class TotalVariationRegularization(object):
         """
         loss_w = torch.dist(image[:, :, :, :-1], image[:, :, :, 1:])
         loss_h = torch.dist(image[:, :, :-1, :], image[:, :, 1:, :])
-        return loss_w + loss_h
+        return (loss_w + loss_h) / image.numel()
