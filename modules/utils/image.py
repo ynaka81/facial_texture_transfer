@@ -42,6 +42,8 @@ class ImageUtils(object):
         :param filename: (str) The output image file name.
         :param image: (torch.FloatTensor) The image tensor to output.
         """
+        # Clamp image value.
+        ImageUtils.clamp_image(image)
         # Transform to pillow image.
         image = image.squeeze(0)
         save_transform = transforms.Compose([
@@ -63,6 +65,6 @@ class ImageUtils(object):
 
         :param image: (torch.FloatTensor) The image to be clamped.
         """
-        image[:, 0, :, :].data.clamp_(-0.485 / 0.229, (1 - 0.485) / 0.229)
-        image[:, 1, :, :].data.clamp_(-0.456 / 0.224, (1 - 0.456) / 0.224)
-        image[:, 2, :, :].data.clamp_(-0.406 / 0.225, (1 - 0.406) / 0.225)
+        image[:, 0, :, :].clamp_(-0.485 / 0.229, (1 - 0.485) / 0.229)
+        image[:, 1, :, :].clamp_(-0.456 / 0.224, (1 - 0.456) / 0.224)
+        image[:, 2, :, :].clamp_(-0.406 / 0.225, (1 - 0.406) / 0.225)

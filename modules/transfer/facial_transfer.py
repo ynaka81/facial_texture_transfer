@@ -2,7 +2,7 @@ import os
 
 from tqdm import tqdm, trange
 from torch.autograd import Variable
-from torch.optim import Adam
+from torch.optim import LBFGS
 
 from modules.losses.simple_content_loss import SimpleContentLoss
 from modules.losses.total_variation_regularization import TotalVariationRegularization
@@ -57,7 +57,7 @@ class FacialTransfer(object):
             style_image = style_image.cuda()
         # Initialize optimizer.
         target_image = Variable(content_image.data, requires_grad=True)
-        optimizer = Adam([target_image], lr=5e-3)
+        optimizer = LBFGS([target_image], lr=1, max_iter=10)
         # Setup losses.
         content_features = self.vgg(content_image)
         content_loss = SimpleContentLoss(content_features, self.gpu)
@@ -66,23 +66,30 @@ class FacialTransfer(object):
         tv_loss = TotalVariationRegularization()
         # Optimize the image.
         for i in trange(iterations):
-            ImageUtils.clamp_image(target_image)
-            # Initialize gradation.
-            optimizer.zero_grad()
-            # Calculate losses.
-            output_features = self.vgg(target_image)
-            content_loss_i = content_loss(output_features)
-            style_loss_i = style_loss(output_features)
-            tv_loss_i = tv_loss(target_image)
-            total_loss = content_weight * content_loss_i + style_weight * style_loss_i + tv_weight * tv_loss_i
-            if i % log_interval == 0:
-                tqdm.write('content_loss = ' + str(content_loss_i.data.cpu().numpy()[0]) + ', ' +
-                           'style_loss = ' + str(style_loss_i.data.cpu().numpy()[0]) + ', ' +
-                           'tv_loss = ' + str(tv_loss_i.data.cpu().numpy()[0]) + ', ' +
-                           'total_loss = ' + str(total_loss.data.cpu().numpy()[0]))
+            self.call_count = 0
+
+            def closure():
+                ImageUtils.clamp_image(target_image.data)
+                # Initialize gradation.
+                optimizer.zero_grad()
+                # Calculate losses.
+                output_features = self.vgg(target_image)
+                content_loss_i = content_loss(output_features)
+                style_loss_i = style_loss(output_features)
+                tv_loss_i = tv_loss(target_image)
+                total_loss = content_weight * content_loss_i + style_weight * style_loss_i + tv_weight * tv_loss_i
+                total_loss.backward(retain_graph=True)
+                # Log each loss.
+                if i % log_interval == 0 and self.call_count == 0:
+                    tqdm.write('content_loss = ' + str(content_loss_i.data.cpu().numpy()[0]) + ', ' +
+                               'style_loss = ' + str(style_loss_i.data.cpu().numpy()[0]) + ', ' +
+                               'tv_loss = ' + str(tv_loss_i.data.cpu().numpy()[0]) + ', ' +
+                               'total_loss = ' + str(total_loss.data.cpu().numpy()[0]))
+                self.call_count += 1
+                return total_loss
+
             # Optimize.
-            total_loss.backward()
-            optimizer.step()
+            optimizer.step(closure)
             # Output optimizing image.
             if (i + 1) % output_interval == 0:
                 output_image = target_image.clone()
