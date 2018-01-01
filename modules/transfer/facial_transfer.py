@@ -67,6 +67,7 @@ class FacialTransfer(object):
         for i in trange(iterations):
 
             def closure():
+                ImageUtils.clamp_image(target_image)
                 # Initialize gradation.
                 optimizer.zero_grad()
                 # Calculate losses.

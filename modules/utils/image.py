@@ -55,3 +55,14 @@ class ImageUtils(object):
         b, g, r = image.split()
         image = Image.merge(image.mode, (r, g, b))
         image.save(filename)
+
+    @staticmethod
+    def clamp_image(image: torch.FloatTensor):
+        """
+        Clamp image.
+
+        :param image: (torch.FloatTensor) The image to be clamped.
+        """
+        image[:, 0, :, :].data.clamp_(-0.485 / 0.229, (1 - 0.485) / 0.229)
+        image[:, 1, :, :].data.clamp_(-0.456 / 0.224, (1 - 0.456) / 0.224)
+        image[:, 2, :, :].data.clamp_(-0.406 / 0.225, (1 - 0.406) / 0.225)
