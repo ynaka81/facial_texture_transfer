@@ -4,7 +4,7 @@ from tqdm import tqdm, trange
 from torch.autograd import Variable
 from torch.optim import Adam
 
-from modules.losses.gram_matrix_style_loss import GramMatrixStyleLoss
+from modules.losses.simple_content_loss import SimpleContentLoss
 from modules.losses.total_variation_regularization import TotalVariationRegularization
 from modules.models.vgg import Vgg16
 from modules.utils.image import ImageUtils
@@ -14,13 +14,13 @@ class FacialTransfer(object):
     """
     The implementation of "Photo-realistic Facial Texture Transfer".
 
-    :param content_loss_class: (object) The content loss class.
+    :param style_loss_class: (object) The style loss class.
     :param gpu: (bool) Whether or not to use GPU.
     :param output: (str) The output directory name.
     """
 
-    def __init__(self, content_loss_class: object, gpu: bool, output: str):
-        self.content_loss_class = content_loss_class
+    def __init__(self, style_loss_class: object, gpu: bool, output: str):
+        self.style_loss_class = style_loss_class
         self.gpu = gpu
         self.output = output
         # Load pre-train VGG model.
@@ -60,9 +60,9 @@ class FacialTransfer(object):
         optimizer = Adam([target_image], lr=5e-3)
         # Setup losses.
         content_features = self.vgg(content_image)
-        content_loss = self.content_loss_class(content_features, self.gpu)
+        content_loss = SimpleContentLoss(content_features, self.gpu)
         style_features = self.vgg(style_image)
-        style_loss = GramMatrixStyleLoss(style_features, self.gpu)
+        style_loss = self.style_loss_class(style_features, self.gpu)
         tv_loss = TotalVariationRegularization()
         # Optimize the image.
         for i in trange(iterations):
