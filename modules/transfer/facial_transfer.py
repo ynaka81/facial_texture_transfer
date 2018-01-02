@@ -3,6 +3,7 @@ import os
 from tqdm import tqdm, trange
 from torch.autograd import Variable
 from torch.optim import LBFGS
+from torch.nn import Upsample
 
 from modules.losses.simple_content_loss import SimpleContentLoss
 from modules.losses.face_identification_loss import FaceIdentificationLoss
@@ -60,6 +61,9 @@ class FacialTransfer(object):
         # Multi-resolution optimization process.
         base = 0
         target_image_r = None
+        upsample = Upsample(scale_factor=2, mode='bilinear')
+        if self.gpu:
+            upsample.cuda()
         for stride in tqdm([4, 2, 1]):
             if content_size // stride < 64:
                 continue
@@ -69,10 +73,7 @@ class FacialTransfer(object):
             if target_image_r is None:  # Initial stage.
                 target_image_r = Variable(content_image_r.data, requires_grad=True)
             else:
-                b, ch, h, w = target_image_r.size()
-                target_image_r_data = target_image_r.data
-                target_image_r_data = target_image_r_data.unsqueeze(3).repeat(1, 1, 1, 2, 1).view(b, ch, h * 2, w)
-                target_image_r_data = target_image_r_data.unsqueeze(4).repeat(1, 1, 1, 1, 2).view(b, ch, h * 2, w * 2)
+                target_image_r_data = upsample(target_image_r).data
                 target_image_r = Variable(target_image_r_data, requires_grad=True)
             # Initialize optimizer.
             optimizer = LBFGS([target_image_r], lr=1, max_iter=10)
@@ -92,7 +93,7 @@ class FacialTransfer(object):
                 self.call_count = 0
 
                 def closure():
-                    ImageUtils.clamp_image(target_image_r.data)
+                    target_image_r.data.clamp_(0, 1)
                     # Initialize gradation.
                     optimizer.zero_grad()
                     # Calculate each losses.

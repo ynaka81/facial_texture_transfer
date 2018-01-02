@@ -56,6 +56,6 @@ class MRFTextureStyleLoss(object):
         loss = 0
         for feature_name in self.STYLE_FEATURES:
             p_x_t = self.__patch(features[feature_name])
-            p_nn_x_t = self.__nearest_neighbor(p_x_t, self.__p_x_s[feature_name], self.__pn_x_s[feature_name])
-            loss += torch.dist(p_x_t, p_nn_x_t)
+            p_nn_x_s = self.__nearest_neighbor(p_x_t, self.__p_x_s[feature_name], self.__pn_x_s[feature_name])
+            loss += torch.dist(p_x_t, p_nn_x_s) / p_nn_x_s.numel()
         return loss

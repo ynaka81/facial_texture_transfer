@@ -1,3 +1,5 @@
+import torch
+from torch.autograd import Variable
 import torch.nn as nn
 import torchvision.models as models
 
@@ -13,6 +15,8 @@ class Vgg16(nn.Module):
 
     def __init__(self):
         super(Vgg16, self).__init__()
+        self.__mean = Variable(torch.Tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1), requires_grad=False)
+        self.__std = Variable(torch.Tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1), requires_grad=False)
         self.__vgg = models.vgg16(pretrained=True).features
 
     def cuda(self) -> nn.Module:
@@ -26,7 +30,7 @@ class Vgg16(nn.Module):
         return self
 
     def forward(self, X):
-        h = X
+        h = (X - self.__mean) / self.__std
         features = {}
         for no, layer in enumerate(self.__vgg):
             h = layer(h)
