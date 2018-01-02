@@ -55,44 +55,61 @@ class FacialTransfer(object):
         if self.gpu:
             content_image = content_image.cuda()
             style_image = style_image.cuda()
-        # Initialize optimizer.
-        target_image = Variable(content_image.data, requires_grad=True)
-        optimizer = LBFGS([target_image], lr=1, max_iter=10)
-        # Setup losses.
-        content_features = self.vgg(content_image)
-        content_loss = SimpleContentLoss(content_features, self.gpu)
-        style_features = self.vgg(style_image)
-        style_loss = self.style_loss_class(style_features, self.gpu)
-        tv_loss = TotalVariationRegularization()
-        # Optimize the image.
-        for i in trange(iterations):
-            self.call_count = 0
+        # Multi-resolution optimization process.
+        base = 0
+        target_image_r = None
+        for stride in tqdm([4, 2, 1]):
+            if content_size // stride < 64:
+                continue
+            # Setup images.
+            content_image_r = content_image[:, :, ::stride, ::stride]
+            style_image_r = style_image[:, :, ::stride, ::stride]
+            if target_image_r is None:  # Initial stage.
+                target_image_r = Variable(content_image_r.data, requires_grad=True)
+            else:
+                b, ch, h, w = target_image_r.size()
+                target_image_r_data = target_image_r.data
+                target_image_r_data = target_image_r_data.unsqueeze(3).repeat(1, 1, 1, 2, 1).view(b, ch, h * 2, w)
+                target_image_r_data = target_image_r_data.unsqueeze(4).repeat(1, 1, 1, 1, 2).view(b, ch, h * 2, w * 2)
+                target_image_r = Variable(target_image_r_data, requires_grad=True)
+            # Initialize optimizer.
+            optimizer = LBFGS([target_image_r], lr=1, max_iter=10)
+            # Setup losses.
+            content_features = self.vgg(content_image_r)
+            content_loss = SimpleContentLoss(content_features, self.gpu)
+            style_features = self.vgg(style_image_r)
+            style_loss = self.style_loss_class(style_features, self.gpu)
+            tv_loss = TotalVariationRegularization()
+            # Optimize the image.
+            for i in trange(base, iterations + base):
+                self.call_count = 0
 
-            def closure():
-                ImageUtils.clamp_image(target_image.data)
-                # Initialize gradation.
-                optimizer.zero_grad()
-                # Calculate losses.
-                output_features = self.vgg(target_image)
-                content_loss_i = content_loss(output_features)
-                style_loss_i = style_loss(output_features)
-                tv_loss_i = tv_loss(target_image)
-                total_loss = content_weight * content_loss_i + style_weight * style_loss_i + tv_weight * tv_loss_i
-                total_loss.backward(retain_graph=True)
-                # Log each loss.
-                if i % log_interval == 0 and self.call_count == 0:
-                    tqdm.write('content_loss = ' + str(content_loss_i.data.cpu().numpy()[0]) + ', ' +
-                               'style_loss = ' + str(style_loss_i.data.cpu().numpy()[0]) + ', ' +
-                               'tv_loss = ' + str(tv_loss_i.data.cpu().numpy()[0]) + ', ' +
-                               'total_loss = ' + str(total_loss.data.cpu().numpy()[0]))
-                self.call_count += 1
-                return total_loss
+                def closure():
+                    ImageUtils.clamp_image(target_image_r.data)
+                    # Initialize gradation.
+                    optimizer.zero_grad()
+                    # Calculate losses.
+                    output_features = self.vgg(target_image_r)
+                    content_loss_i = content_loss(output_features)
+                    style_loss_i = style_loss(output_features)
+                    tv_loss_i = tv_loss(target_image_r)
+                    total_loss = content_weight * content_loss_i + style_weight * style_loss_i + tv_weight * tv_loss_i
+                    total_loss.backward(retain_graph=True)
+                    # Log each loss.
+                    if i % log_interval == 0 and self.call_count == 0:
+                        tqdm.write('content_loss = ' + str(content_loss_i.data.cpu().numpy()[0]) + ', ' +
+                                   'style_loss = ' + str(style_loss_i.data.cpu().numpy()[0]) + ', ' +
+                                   'tv_loss = ' + str(tv_loss_i.data.cpu().numpy()[0]) + ', ' +
+                                   'total_loss = ' + str(total_loss.data.cpu().numpy()[0]))
+                    self.call_count += 1
+                    return total_loss
 
-            # Optimize.
-            optimizer.step(closure)
-            # Output optimizing image.
-            if (i + 1) % output_interval == 0:
-                output_image = target_image.clone()
-                if self.gpu:
-                    output_image = target_image.cpu()
-                ImageUtils.save_image(output_image.data, os.path.join(self.output, f'{i + 1}.png'))
+                # Optimize.
+                optimizer.step(closure)
+                # Output optimizing image.
+                if (i + 1) % output_interval == 0:
+                    output_image = target_image_r.clone()
+                    if self.gpu:
+                        output_image = target_image_r.cpu()
+                    ImageUtils.save_image(output_image.data, os.path.join(self.output, f'{i + 1}.png'))
+            base += iterations
