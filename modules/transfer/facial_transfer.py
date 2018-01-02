@@ -77,12 +77,16 @@ class FacialTransfer(object):
             # Initialize optimizer.
             optimizer = LBFGS([target_image_r], lr=1, max_iter=10)
             # Setup losses.
-            content_features = self.vgg(content_image_r)
-            content_loss = SimpleContentLoss(content_features, self.gpu)
-            face_loss = FaceIdentificationLoss(content_image_r, self.gpu)
-            style_features = self.vgg(style_image_r)
-            style_loss = self.style_loss_class(style_features, self.gpu)
-            tv_loss = TotalVariationRegularization()
+            if content_weight > 0:
+                content_features = self.vgg(content_image_r)
+                content_loss = SimpleContentLoss(content_features, self.gpu)
+            if face_weight > 0:
+                face_loss = FaceIdentificationLoss(content_image_r, self.gpu)
+            if style_weight > 0:
+                style_features = self.vgg(style_image_r)
+                style_loss = self.style_loss_class(style_features, self.gpu)
+            if tv_weight > 0:
+                tv_loss = TotalVariationRegularization()
             # Optimize the image.
             for i in trange(base, iterations + base):
                 self.call_count = 0
@@ -91,21 +95,32 @@ class FacialTransfer(object):
                     ImageUtils.clamp_image(target_image_r.data)
                     # Initialize gradation.
                     optimizer.zero_grad()
-                    # Calculate losses.
+                    # Calculate each losses.
+                    total_loss = 0
+                    losses = {}
                     output_features = self.vgg(target_image_r)
-                    content_loss_i = content_loss(output_features)
-                    face_loss_i = face_loss(target_image_r)
-                    style_loss_i = style_loss(output_features)
-                    tv_loss_i = tv_loss(target_image_r)
-                    total_loss = content_weight * content_loss_i + face_weight * face_loss_i + style_weight * style_loss_i + tv_weight * tv_loss_i
+                    if content_weight > 0:
+                        content_loss_i = content_loss(output_features)
+                        losses['content_loss'] = content_loss_i
+                        total_loss += content_weight * content_loss_i
+                    if face_weight > 0:
+                        face_loss_i = face_loss(target_image_r)
+                        losses['face_loss'] = face_loss_i
+                        total_loss += face_weight * face_loss_i
+                    if style_weight > 0:
+                        style_loss_i = style_loss(output_features)
+                        losses['style_loss'] = style_loss_i
+                        total_loss += style_weight * style_loss_i
+                    if tv_weight > 0:
+                        tv_loss_i = tv_loss(target_image_r)
+                        losses['tv_loss'] = tv_loss_i
+                        total_loss += tv_weight * tv_loss_i
                     total_loss.backward(retain_graph=True)
-                    # Log each loss.
+                    # Log each losses.
                     if i % log_interval == 0 and self.call_count == 0:
-                        tqdm.write('content_loss = ' + str(content_loss_i.data.cpu().numpy()[0]) + ', ' +
-                                   'face_loss = ' + str(face_loss_i.data.cpu().numpy()[0]) + ', ' +
-                                   'style_loss = ' + str(style_loss_i.data.cpu().numpy()[0]) + ', ' +
-                                   'tv_loss = ' + str(tv_loss_i.data.cpu().numpy()[0]) + ', ' +
-                                   'total_loss = ' + str(total_loss.data.cpu().numpy()[0]))
+                        for name, loss in losses.items():
+                            tqdm.write(name + ' = ' + str(loss.data.cpu().numpy()[0]), end=', ')
+                        tqdm.write('total_loss = ' + str(total_loss.data.cpu().numpy()[0]))
                     self.call_count += 1
                     return total_loss
 
