@@ -4,6 +4,7 @@ from tqdm import tqdm, trange
 from torch.autograd import Variable
 from torch.optim import LBFGS
 from torch.nn import Upsample
+from tensorboardX import SummaryWriter
 
 from modules.losses.simple_content_loss import SimpleContentLoss
 from modules.losses.face_identification_loss import FaceIdentificationLoss
@@ -25,6 +26,7 @@ class FacialTransfer(object):
         self.style_loss_class = style_loss_class
         self.gpu = gpu
         self.output = output
+        self.writer = SummaryWriter()
         # Load pre-train VGG model.
         self.vgg = Vgg16()
         if gpu:
@@ -52,8 +54,10 @@ class FacialTransfer(object):
         # Load images.
         content_image = ImageUtils.load_image(content_image, content_size)
         content_image = Variable(content_image, requires_grad=False)
+        self.writer.add_image('input/content_image', content_image.data.squeeze(0))
         style_image = ImageUtils.load_image(style_image, style_size)
         style_image = Variable(style_image, requires_grad=False)
+        self.writer.add_image('input/style_image', style_image.data.squeeze(0))
         # Convert to GPU mode.
         if self.gpu:
             content_image = content_image.cuda()
@@ -118,19 +122,23 @@ class FacialTransfer(object):
                         total_loss += tv_weight * tv_loss_i
                     total_loss.backward(retain_graph=True)
                     # Log each losses.
-                    if i % log_interval == 0 and self.call_count == 0:
-                        for name, loss in losses.items():
-                            tqdm.write(name + ' = ' + str(loss.data.cpu().numpy()[0]), end=', ')
-                        tqdm.write('total_loss = ' + str(total_loss.data.cpu().numpy()[0]))
+                    if self.call_count == 0:
+                        self.writer.add_scalars('losses', losses, i)
+                        if i % log_interval == 0:
+                            for name, loss in losses.items():
+                                tqdm.write(name + ' = ' + str(loss.data.cpu().numpy()[0]), end=', ')
+                            tqdm.write('total_loss = ' + str(total_loss.data.cpu().numpy()[0]))
                     self.call_count += 1
                     return total_loss
 
                 # Optimize.
                 optimizer.step(closure)
                 # Output optimizing image.
+                self.writer.add_image('output/target_image', target_image_r.data.squeeze(0), i)
                 if (i + 1) % output_interval == 0:
                     output_image = target_image_r.clone()
                     if self.gpu:
                         output_image = target_image_r.cpu()
                     ImageUtils.save_image(output_image.data, os.path.join(self.output, f'{i + 1}.png'))
             base += iterations
+        self.writer.close()
