@@ -106,28 +106,29 @@ class FacialTransfer(object):
                     output_features = self.vgg(target_image_r)
                     if content_weight > 0:
                         content_loss_i = content_loss(output_features)
-                        losses['content_loss'] = content_loss_i
-                        total_loss += content_weight * content_loss_i
+                        losses['content_loss'] = content_weight * content_loss_i
+                        total_loss += losses['content_loss']
                     if face_weight > 0:
                         face_loss_i = face_loss(target_image_r)
-                        losses['face_loss'] = face_loss_i
-                        total_loss += face_weight * face_loss_i
+                        losses['face_loss'] = face_weight * face_loss_i
+                        total_loss += losses['face_loss']
                     if style_weight > 0:
                         style_loss_i = style_loss(output_features)
-                        losses['style_loss'] = style_loss_i
-                        total_loss += style_weight * style_loss_i
+                        losses['style_loss'] = style_weight * style_loss_i
+                        total_loss += losses['style_loss']
                     if tv_weight > 0:
                         tv_loss_i = tv_loss(target_image_r)
-                        losses['tv_loss'] = tv_loss_i
-                        total_loss += tv_weight * tv_loss_i
+                        losses['tv_loss'] = tv_weight * tv_loss_i
+                        total_loss += losses['tv_loss']
                     total_loss.backward()
                     # Log each losses.
                     if self.call_count == 0:
-                        self.writer.add_scalars('losses', losses, i)
                         if i % log_interval == 0:
                             for name, loss in losses.items():
                                 tqdm.write(name + ' = ' + str(loss.data.cpu().numpy()[0]), end=', ')
                             tqdm.write('total_loss = ' + str(total_loss.data.cpu().numpy()[0]))
+                        losses['total_loss'] = total_loss
+                        self.writer.add_scalars('losses', losses, i)
                     self.call_count += 1
                     return total_loss
 
