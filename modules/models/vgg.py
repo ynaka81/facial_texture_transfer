@@ -27,6 +27,8 @@ class Vgg16(nn.Module):
         """
         super().cuda()
         self.__vgg.cuda()
+        self.__mean = self.__mean.cuda()
+        self.__std = self.__std.cuda()
         return self
 
     def forward(self, X):

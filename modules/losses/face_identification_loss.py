@@ -25,12 +25,13 @@ class FaceIdentificationLoss(object):
         # Calculate content feature.
         self.__upsample = Upsample(scale_factor=2, mode='bilinear')
         self.__std_numel = Variable(torch.Tensor([1 / math.sqrt(content_image.numel())]), requires_grad=False)
+        if gpu:
+            self.__std_numel = self.__std_numel.cuda()
+            self.__upsample.cuda()
         self.__f_x_c = Variable(self.__embedding(content_image).data, requires_grad=False)
         self.__mse_loss = MSELoss(size_average=False)
         if gpu:
-            self.__std_numel = self.__std_numel.cuda()
             self.__f_x_c = self.__f_x_c.cuda()
-            self.__upsample.cuda()
             self.__mse_loss.cuda()
 
     def __embedding(self, image):

@@ -24,14 +24,14 @@ class MRFTextureStyleLoss(object):
             feature = style_features[feature_name]
             _, ch, _, _ = feature.size()
             w_p = torch.eye(ch * self.K * self.K).view(-1, ch, self.K, self.K)
+            if gpu:
+                w_p = w_p.cuda()
             self.__w_p[ch] = Variable(w_p, requires_grad=False)
             p_x_s = self.__patch(feature)
+            if gpu:
+                p_x_s = p_x_s.cuda()
             self.__p_x_s[feature_name] = p_x_s
             self.__pn_x_s[feature_name] = self.__normalize_patch(p_x_s)
-        if gpu:
-            for x in (self.__p_x_s, self.__pn_x_s, self.__w_p):
-                for k, v in x.items():
-                    x[k] = v.cuda()
 
     def __patch(self, feature):
         _, ch, _, _ = feature.size()
