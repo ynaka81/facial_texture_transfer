@@ -71,9 +71,9 @@ class FacialTransfer(object):
             content_image_r = content_image[:, :, ::stride, ::stride]
             style_image_r = style_image[:, :, ::stride, ::stride]
             if target_image_r is None:  # Initial stage.
-                target_image_r = Variable(content_image_r.data, requires_grad=True)
+                target_image_r = Variable(content_image_r.clone().data, requires_grad=True)
             else:
-                target_image_r_data = upsample(target_image_r).data
+                target_image_r_data = upsample(target_image_r.clone()).data
                 target_image_r = Variable(target_image_r_data, requires_grad=True)
             # Initialize optimizer.
             optimizer = LBFGS([target_image_r], lr=1, max_iter=10)
