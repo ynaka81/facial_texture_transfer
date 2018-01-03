@@ -30,8 +30,9 @@ class MRFTextureStyleLoss(object):
             p_x_s = self.__patch(feature)
             if gpu:
                 p_x_s = p_x_s.cuda()
-            self.__p_x_s[feature_name] = p_x_s
-            self.__pn_x_s[feature_name] = self.__normalize_patch(p_x_s)
+            self.__p_x_s[feature_name] = Variable(p_x_s.data, requires_grad=False)
+            pn_x_s = self.__normalize_patch(p_x_s)
+            self.__pn_x_s[feature_name] = Variable(pn_x_s.data, requires_grad=False)
 
     def __patch(self, feature):
         _, ch, _, _ = feature.size()

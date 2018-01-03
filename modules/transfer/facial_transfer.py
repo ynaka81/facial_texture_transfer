@@ -120,7 +120,7 @@ class FacialTransfer(object):
                         tv_loss_i = tv_loss(target_image_r)
                         losses['tv_loss'] = tv_loss_i
                         total_loss += tv_weight * tv_loss_i
-                    total_loss.backward(retain_graph=True)
+                    total_loss.backward()
                     # Log each losses.
                     if self.call_count == 0:
                         self.writer.add_scalars('losses', losses, i)
