@@ -20,7 +20,7 @@ class GramMatrixStyleLoss(object):
         for feature_name in self.STYLE_FEATURES:
             gram_matrix = self.__gram_matrix(style_features[feature_name])
             self.__g_x_s[feature_name] = Variable(gram_matrix.data, requires_grad=False)
-        self.__mse_loss = MSELoss(size_average=False)
+        self.__mse_loss = MSELoss()
         if gpu:
             for name, g_x_s in self.__g_x_s.items():
                 self.__g_x_s[name] = g_x_s.cuda()

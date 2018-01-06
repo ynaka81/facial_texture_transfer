@@ -12,6 +12,6 @@ class TotalVariationRegularization(object):
 
         :param features: (dict) The features maps of output image.
         """
-        loss_w = torch.dist(image[:, :, :, :-1], image[:, :, :, 1:])
-        loss_h = torch.dist(image[:, :, :-1, :], image[:, :, 1:, :])
-        return (loss_w + loss_h) / image.numel()
+        loss_w = torch.sum((image[:, :, :, :-1] - image[:, :, :, 1:]) ** 2)
+        loss_h = torch.sum((image[:, :, :-1, :] - image[:, :, 1:, :]) ** 2)
+        return loss_w + loss_h
