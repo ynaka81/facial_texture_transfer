@@ -69,7 +69,7 @@ class FacialTransfer(object):
         if self.gpu:
             upsample.cuda()
         for stride in tqdm([4, 2, 1]):
-            if content_size // stride < 64:
+            if content_size // stride < 32:
                 continue
             # Setup images.
             content_image_r = content_image[:, :, ::stride, ::stride]

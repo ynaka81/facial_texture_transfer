@@ -2,7 +2,7 @@ import math
 
 import torch
 from torch.autograd import Variable
-from torch.nn import MSELoss, Upsample
+from torch.nn import Upsample
 
 from modules.models.inception_resnet_v1 import create_net
 
@@ -29,10 +29,8 @@ class FaceIdentificationLoss(object):
             self.__std_numel = self.__std_numel.cuda()
             self.__upsample.cuda()
         self.__f_x_c = Variable(self.__embedding(content_image).data, requires_grad=False)
-        self.__mse_loss = MSELoss(size_average=False)
         if gpu:
             self.__f_x_c = self.__f_x_c.cuda()
-            self.__mse_loss.cuda()
 
     def __embedding(self, image):
         # Upsample when the image is too small.

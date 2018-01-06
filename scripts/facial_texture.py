@@ -13,15 +13,15 @@ def main():
     args = make_args()
     # Set parameters if it is not specified by command.
     if args.iterations is None:
-        args.iterations = 100
+        args.iterations = 200
     if args.content_weight is None:
-        args.content_weight = 0
+        args.content_weight = 2
     if args.face_weight is None:
-        args.face_weight = 1e2
+        args.face_weight = 1e4
     if args.style_weight is None:
-        args.style_weight = 1e2
+        args.style_weight = 1.5
     if args.tv_weight is None:
-        args.tv_weight = 5e1
+        args.tv_weight = 1e-2
     # Make output directory.
     output = 'output/facial_texture'
     os.makedirs(output, exist_ok=True)
